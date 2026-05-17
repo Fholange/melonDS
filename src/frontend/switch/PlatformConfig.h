@@ -44,6 +44,12 @@ extern int hardcoreMode;
 
 extern int notification;
 
+extern char WebDAVURL[256];
+extern char WebDAVUsername[128];
+extern char WebDAVPassword[128];
+extern char WebDAVRemotePath[256];
+extern int  WebDAVLastSync;
+
 }
 
 #endif

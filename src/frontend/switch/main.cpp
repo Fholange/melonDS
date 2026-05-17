@@ -35,6 +35,7 @@
 
 #include "RetroAchievements.h"
 #include "NotificationSystem.h"
+#include "WebDAVSync.h"
 #include "TriggerNotification.h"
 #include "RATracker.h"
 #include "InputConfig.h"
@@ -859,6 +860,19 @@ void LoadROM(const char* file)
 {
     Overclocking::ApplyOverclock(Config::SwitchOverclock);
 
+    // Sync save from WebDAV before loading the ROM
+    std::string syncMsg;
+    WebDAVSync::SyncResult syncResult = WebDAVSync::Sync_NoConfig;
+    {
+        char sram_path[1024];
+        strncpy(sram_path, file, 1023);
+        sram_path[1023] = '\0';
+        char* dot = strrchr(sram_path, '.');
+        if (dot) strncpy(dot, ".sav", 5);
+        else strncat(sram_path, ".sav", 1023);
+        syncResult = WebDAVSync::Sync(sram_path, syncMsg);
+    }
+
     assert(State == emuState_Nothing);
     int res = Frontend::LoadROM(file, 0);
     if (res != Frontend::Load_OK)
@@ -871,6 +885,10 @@ void LoadROM(const char* file)
         StateAtomic = State;
         CurrentUiScreen = uiScreen_Start;
     }
+
+    // Show sync result after ROM loads so the notification renders in-game
+    if (syncResult != WebDAVSync::Sync_NoConfig)
+        g_notification.Show("WebDAV: %s", syncMsg.c_str());
 
     load_game_from_file(file);
     
@@ -1134,6 +1152,15 @@ int main(int argc, const char* argv[])
 
     Emulation::DeInit();
     Frontend::DeInit_ROM();
+
+    // Sync save to WebDAV on exit
+    {
+        if (Frontend::SRAMPath[0][0] != '\0')
+        {
+            std::string msg;
+            WebDAVSync::Sync(Frontend::SRAMPath[0], msg);
+        }
+    }
 
     resetRCClient();
 

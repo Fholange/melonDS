@@ -21,6 +21,7 @@ SET(SOURCES_SWITCH
     InputConfig.cpp
     TriggerNotification.cpp
     RATracker.cpp
+    WebDAVSync.cpp
     ../Util_ROM.cpp
     ../Util_Audio.cpp
     ../Util_Video.cpp
@@ -81,7 +82,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(melonDS.elf curl z)
+target_link_libraries(melonDS.elf curl mbedtls mbedcrypto mbedx509 z)
 
 target_include_directories(melonDS.elf PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(melonDS.elf PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")

@@ -9,11 +9,13 @@
 
 #include "PlatformConfig.h"
 #include "InputConfig.h"
+#include "../FrontendUtil.h"
 
 #include <string.h>
 
 #include "RetroAchievements.h"
 #include "NotificationSystem.h"
+#include "WebDAVSync.h"
 
 namespace {
     static u64 PlatformKeysHeld = 0;
@@ -716,6 +718,70 @@ void DoGui(BoxGui::Frame& parent)
 
             DoCheckbox(settingsFrame, settingsSkewer, "Disable RA notifications", notification);
             Config::notification = notification;
+        }
+        {
+            static char webdav_url[256]      = {0};
+            static char webdav_user[128]     = {0};
+            static char webdav_pass[128]     = {0};
+            static char webdav_path[256]     = {0};
+            static bool webdav_initialized   = false;
+            static bool doSync               = false;
+            static char syncStatusMsg[256]   = {0};
+
+            if (!webdav_initialized)
+            {
+                strncpy(webdav_url,  Config::WebDAVURL,        sizeof(webdav_url)  - 1);
+                strncpy(webdav_user, Config::WebDAVUsername,   sizeof(webdav_user) - 1);
+                strncpy(webdav_pass, Config::WebDAVPassword,   sizeof(webdav_pass) - 1);
+                strncpy(webdav_path, Config::WebDAVRemotePath, sizeof(webdav_path) - 1);
+                snprintf(syncStatusMsg, sizeof(syncStatusMsg), "%s", WebDAVSync::GetStatusString());
+                webdav_initialized = true;
+            }
+
+            SectionHeader(settingsFrame, settingsSkewer, "WebDAV Save Sync");
+            DoTextField(settingsFrame, settingsSkewer, "URL",           webdav_url,  sizeof(webdav_url));
+            DoTextField(settingsFrame, settingsSkewer, "Username",      webdav_user, sizeof(webdav_user));
+            DoTextField(settingsFrame, settingsSkewer, "Password",      webdav_pass, sizeof(webdav_pass));
+            DoTextField(settingsFrame, settingsSkewer, "Remote Path",   webdav_path, sizeof(webdav_path));
+            // Show live progress string during sync, otherwise show last status
+            const char* progress = WebDAVSync::GetProgressString();
+            DoLabel(settingsFrame, settingsSkewer, progress[0] ? progress : syncStatusMsg);
+
+            strncpy(Config::WebDAVURL,        webdav_url,  sizeof(Config::WebDAVURL)  - 1);
+            strncpy(Config::WebDAVUsername,   webdav_user, sizeof(Config::WebDAVUsername) - 1);
+            strncpy(Config::WebDAVPassword,   webdav_pass, sizeof(Config::WebDAVPassword) - 1);
+            strncpy(Config::WebDAVRemotePath, webdav_path, sizeof(Config::WebDAVRemotePath) - 1);
+
+            doSync = false;
+            DoCheckbox(settingsFrame, settingsSkewer, "Sync Saves Now", doSync);
+            if (doSync)
+            {
+                // Use active SRAM path if ROM is loaded, else derive from last ROM path
+                char sync_path[1024] = {0};
+                if (Frontend::SRAMPath[0][0] != '\0')
+                {
+                    strncpy(sync_path, Frontend::SRAMPath[0], 1023);
+                }
+                else if (Config::LastROMPath[0][0] != '\0')
+                {
+                    strncpy(sync_path, Config::LastROMPath[0], 1023);
+                    sync_path[1023] = '\0';
+                    char* dot = strrchr(sync_path, '.');
+                    if (dot) strncpy(dot, ".sav", 5);
+                    else strncat(sync_path, ".sav", 1023);
+                }
+
+                if (sync_path[0] != '\0')
+                {
+                    std::string msg;
+                    WebDAVSync::Sync(sync_path, msg);
+                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "%s", msg.c_str());
+                }
+                else
+                {
+                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "No ROM loaded");
+                }
+            }
         }
         break;
     case uiScreen_DisplaySettings:

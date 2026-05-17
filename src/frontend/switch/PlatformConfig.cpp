@@ -43,6 +43,12 @@ int hardcoreMode = 0;
 
 int notification = 0;
 
+char WebDAVURL[256]        = "";
+char WebDAVUsername[128]   = "";
+char WebDAVPassword[128]   = "";
+char WebDAVRemotePath[256] = "/saves/";
+int  WebDAVLastSync        = 0;
+
 ConfigEntry PlatformConfigFile[] =
 {
     {"GlobalRotation",          0, &GlobalRotation,         0, NULL, 0},
@@ -88,6 +94,12 @@ ConfigEntry PlatformConfigFile[] =
     {"hardcoreMode",                0, &hardcoreMode,                      0, NULL,    0},
 
     {"notification",                0, &notification,                      0, NULL,    0},
+
+    {"WebDAVURL",          1, WebDAVURL,          0, "",                            255},
+    {"WebDAVUsername",     1, WebDAVUsername,     0, "",                            127},
+    {"WebDAVPassword",     1, WebDAVPassword,     0, "",                            127},
+    {"WebDAVRemotePath",   1, WebDAVRemotePath,   0, "/saves/",                    255},
+    {"WebDAVLastSync",     0, &WebDAVLastSync,    0, NULL,                            0},
 
     {"", -1, NULL, 0, NULL, 0}
 };
