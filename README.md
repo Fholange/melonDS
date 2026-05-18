@@ -18,7 +18,7 @@ For saves to stay in sync between this app and RetroArch on other devices, the f
 
 - RetroArch must use the **melonDS DS** core (not the legacy melonDS core). Save files must use the `.srm` extension, which this core produces by default.
 - RetroArch's save directory must be explicitly set. The remote path configured in melonDS must match where RetroArch stores its saves on the WebDAV server. For example, if RetroArch is configured to sync saves to `/retroarch/cores/savefiles/`, that same path must be set as the remote path in melonDS.
-- RetroArch cloud sync must be enabled and pointed at the same WebDAV server. Koofr works well as a free provider. Configure it under Settings → Saving → Cloud Sync.
+- RetroArch cloud sync must be enabled and pointed at the same WebDAV server. [Koofr](https://koofr.eu) works well as a free provider with built-in WebDAV support. Configure it under Settings → Saving → Cloud Sync.
 - The game must be the same ROM on both sides. RetroArch names save files after the ROM filename. melonDS on Switch will look for and upload a file with the same name.
 
 ### melonDS configuration
