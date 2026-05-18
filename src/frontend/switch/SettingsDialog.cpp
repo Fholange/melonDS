@@ -276,7 +276,7 @@ void SectionHeader(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* na
     Gfx::DrawText(Gfx::SystemFontStandard, nameFrame.Area.Position + Gfx::Vector2f{10.f, 0.f}, height, DarkColor, "%s", name);
 }
 
-void DoTextField(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* label, char* buffer, size_t bufferSize, bool first = false)
+void DoTextField(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* label, char* buffer, size_t bufferSize, bool first = false, bool masked = false)
 {
     BoxGui::Frame settingFrame{parent, skewer.Spit({parent.Area.Size.X, UIRowHeight}, Gfx::align_Right),
         {5.f, 5.f}, {5.f, 5.f}};
@@ -290,7 +290,9 @@ void DoTextField(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* labe
             swkbdConfigMakePresetDefault(&kbd);
             swkbdConfigSetInitialText(&kbd, buffer);
             swkbdConfigSetTextCheckCallback(&kbd, NULL);
-    
+            if (masked)
+                swkbdConfigSetPasswordFlag(&kbd, true);
+
             char out[bufferSize];
             rc = swkbdShow(&kbd, out, bufferSize);
             if (R_SUCCEEDED(rc)) {
@@ -317,8 +319,21 @@ void DoTextField(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* labe
         Gfx::align_Left, Gfx::align_Center, label);
 
     settingSkewer.AlignRight(20.f);
-    Gfx::DrawText(Gfx::SystemFontStandard, settingSkewer.CurrentPosition(), TextLineHeight, DarkColor,
-        Gfx::align_Right, Gfx::align_Center, buffer);
+    if (masked && buffer[0] != '\0')
+    {
+        size_t len = strlen(buffer);
+        if (len > 32) len = 32;
+        char dots[33];
+        memset(dots, '*', len);
+        dots[len] = '\0';
+        Gfx::DrawText(Gfx::SystemFontStandard, settingSkewer.CurrentPosition(), TextLineHeight, DarkColor,
+            Gfx::align_Right, Gfx::align_Center, dots);
+    }
+    else
+    {
+        Gfx::DrawText(Gfx::SystemFontStandard, settingSkewer.CurrentPosition(), TextLineHeight, DarkColor,
+            Gfx::align_Right, Gfx::align_Center, buffer);
+    }
 
     if (!first)
     {
@@ -829,10 +844,13 @@ void DoGui(BoxGui::Frame& parent)
                 webdav_initialized = true;
             }
 
+            static bool show_password = false;
+
             SectionHeader(settingsFrame, settingsSkewer, "WebDAV Save Sync");
             DoTextField(settingsFrame, settingsSkewer, "URL",           webdav_url,  sizeof(webdav_url));
             DoTextField(settingsFrame, settingsSkewer, "Username",      webdav_user, sizeof(webdav_user));
-            DoTextField(settingsFrame, settingsSkewer, "Password",      webdav_pass, sizeof(webdav_pass));
+            DoTextField(settingsFrame, settingsSkewer, "Password",      webdav_pass, sizeof(webdav_pass), false, !show_password);
+            DoCheckbox(settingsFrame, settingsSkewer,  "Show password", show_password);
             DoTextField(settingsFrame, settingsSkewer, "Remote Path",   webdav_path, sizeof(webdav_path));
             strncpy(Config::WebDAVURL,        webdav_url,  sizeof(Config::WebDAVURL)  - 1);
             strncpy(Config::WebDAVUsername,   webdav_user, sizeof(Config::WebDAVUsername) - 1);
