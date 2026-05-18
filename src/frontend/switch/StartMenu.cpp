@@ -5,10 +5,12 @@
 #include "main.h"
 #include "ROMMetaDatabase.h"
 #include "ErrorDialog.h"
+#include "SettingsDialog.h"
 
 #include "PlatformConfig.h"
 #include "RetroAchievements.h"
 #include "../FrontendUtil.h"
+#include "WebDAVSync.h"
 
 #include "stb_image/stb_image.h"
 
@@ -162,6 +164,16 @@ void DoGui(BoxGui::Frame& parent)
             if (SideBarEntry(sideBarFrame, sideBarSkewer, "Input settings", true))
             {
                 CurrentUiScreen = uiScreen_InputSettings;
+            }
+            sideBarSkewer.Advance(spacing);
+            if (WebDAVSync::IsSyncing())
+            {
+                SideBarEntry(sideBarFrame, sideBarSkewer, "Syncing...");
+            }
+            else
+            {
+                if (SideBarEntry(sideBarFrame, sideBarSkewer, "Sync Saves"))
+                    WebDAVSync::StartAsyncSync(Frontend::SRAMPath[0]);
             }
             sideBarSkewer.Advance(spacing);
             if (SideBarEntry(sideBarFrame, sideBarSkewer, "Close", true))
@@ -421,7 +433,7 @@ void DoGui(BoxGui::Frame& parent)
                             Frontend::UndoStateLoad();
                             loadedSuccessfully = true;
                         }
-    
+
                         if (loadedSuccessfully)
                         {
                             Emulation::SetPause(false);
@@ -433,6 +445,9 @@ void DoGui(BoxGui::Frame& parent)
                         }
                     }
                 }
+
+            vskewer.Advance(15.f);
+            SettingsDialog::DoSyncWidget(mainFrame, vskewer);
             }
         }
     }

@@ -681,6 +681,71 @@ void ShowImage(BoxGui::Frame& parent, BoxGui::Skewer& skewer, int textureId, int
                        WidgetColorBright);
 }
 
+void DoSyncWidget(BoxGui::Frame& parent, BoxGui::Skewer& skewer)
+{
+    static char syncStatusMsg[256] = {0};
+    static bool doSync = false;
+
+    // Refresh status when idle
+    if (!WebDAVSync::IsSyncing())
+        snprintf(syncStatusMsg, sizeof(syncStatusMsg), "%s", WebDAVSync::GetStatusString());
+
+    // Spinner label
+    {
+        static const char* spinFrames[] = {"|", "/", "-", "\\"};
+        bool syncing = WebDAVSync::IsSyncing();
+        const char* progress = WebDAVSync::GetProgressString();
+        char statusLine[256];
+        if (syncing)
+        {
+            int frame = (int)(Gfx::AnimationTimestamp * 6) % 4;
+            if (progress[0])
+                snprintf(statusLine, sizeof(statusLine), "%s  %s", spinFrames[frame], progress);
+            else
+                snprintf(statusLine, sizeof(statusLine), "%s  Syncing...", spinFrames[frame]);
+        }
+        else
+        {
+            snprintf(statusLine, sizeof(statusLine), "%s", syncStatusMsg);
+        }
+        DoLabelId(parent, skewer, "webdav_status", statusLine);
+    }
+
+    // Sync button
+    doSync = false;
+    if (!WebDAVSync::IsSyncing())
+        DoCheckbox(parent, skewer, "Sync Saves Now", doSync);
+    else
+        DoLabel(parent, skewer, "Syncing...");
+
+    if (doSync)
+    {
+        char sync_path[1024] = {0};
+        if (Frontend::SRAMPath[0][0] != '\0')
+        {
+            strncpy(sync_path, Frontend::SRAMPath[0], 1023);
+        }
+        else if (Config::LastROMPath[0][0] != '\0')
+        {
+            strncpy(sync_path, Config::LastROMPath[0], 1023);
+            sync_path[1023] = '\0';
+            char* dot = strrchr(sync_path, '.');
+            if (dot) strncpy(dot, ".sav", 5);
+            else strncat(sync_path, ".sav", 1023);
+        }
+
+        if (sync_path[0] != '\0')
+        {
+            snprintf(syncStatusMsg, sizeof(syncStatusMsg), "Syncing...");
+            WebDAVSync::StartAsyncSync(sync_path);
+        }
+        else
+        {
+            snprintf(syncStatusMsg, sizeof(syncStatusMsg), "No ROM loaded");
+        }
+    }
+}
+
 void DoGui(BoxGui::Frame& parent)
 {
     BoxGui::Frame settingsFrame{parent,
@@ -758,8 +823,6 @@ void DoGui(BoxGui::Frame& parent)
             static char webdav_pass[128]     = {0};
             static char webdav_path[256]     = {0};
             static bool webdav_initialized   = false;
-            static bool doSync               = false;
-            static char syncStatusMsg[256]   = {0};
 
             if (!webdav_initialized)
             {
@@ -767,7 +830,6 @@ void DoGui(BoxGui::Frame& parent)
                 strncpy(webdav_user, Config::WebDAVUsername,   sizeof(webdav_user) - 1);
                 strncpy(webdav_pass, Config::WebDAVPassword,   sizeof(webdav_pass) - 1);
                 strncpy(webdav_path, Config::WebDAVRemotePath, sizeof(webdav_path) - 1);
-                snprintf(syncStatusMsg, sizeof(syncStatusMsg), "%s", WebDAVSync::GetStatusString());
                 webdav_initialized = true;
             }
 
@@ -776,66 +838,12 @@ void DoGui(BoxGui::Frame& parent)
             DoTextField(settingsFrame, settingsSkewer, "Username",      webdav_user, sizeof(webdav_user));
             DoTextField(settingsFrame, settingsSkewer, "Password",      webdav_pass, sizeof(webdav_pass));
             DoTextField(settingsFrame, settingsSkewer, "Remote Path",   webdav_path, sizeof(webdav_path));
-            // Show spinner while syncing, live progress mid-transfer, status when idle
-            {
-                static const char* spinFrames[] = {"|", "/", "-", "\\"};
-                bool syncing = WebDAVSync::IsSyncing();
-                const char* progress = WebDAVSync::GetProgressString();
-                char statusLine[256];
-                if (syncing)
-                {
-                    int frame = (int)(Gfx::AnimationTimestamp * 6) % 4;
-                    if (progress[0])
-                        snprintf(statusLine, sizeof(statusLine), "%s  %s", spinFrames[frame], progress);
-                    else
-                        snprintf(statusLine, sizeof(statusLine), "%s  Syncing...", spinFrames[frame]);
-                }
-                else
-                {
-                    snprintf(statusLine, sizeof(statusLine), "%s", syncStatusMsg);
-                    // pick up updated status after async sync finishes
-                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "%s", WebDAVSync::GetStatusString());
-                }
-                DoLabelId(settingsFrame, settingsSkewer, "webdav_status", statusLine);
-            }
-
             strncpy(Config::WebDAVURL,        webdav_url,  sizeof(Config::WebDAVURL)  - 1);
             strncpy(Config::WebDAVUsername,   webdav_user, sizeof(Config::WebDAVUsername) - 1);
             strncpy(Config::WebDAVPassword,   webdav_pass, sizeof(Config::WebDAVPassword) - 1);
             strncpy(Config::WebDAVRemotePath, webdav_path, sizeof(Config::WebDAVRemotePath) - 1);
 
-            doSync = false;
-            if (!WebDAVSync::IsSyncing())
-                DoCheckbox(settingsFrame, settingsSkewer, "Sync Saves Now", doSync);
-            else
-                DoLabel(settingsFrame, settingsSkewer, "Syncing...");
-            if (doSync)
-            {
-                // Use active SRAM path if ROM is loaded, else derive from last ROM path
-                char sync_path[1024] = {0};
-                if (Frontend::SRAMPath[0][0] != '\0')
-                {
-                    strncpy(sync_path, Frontend::SRAMPath[0], 1023);
-                }
-                else if (Config::LastROMPath[0][0] != '\0')
-                {
-                    strncpy(sync_path, Config::LastROMPath[0], 1023);
-                    sync_path[1023] = '\0';
-                    char* dot = strrchr(sync_path, '.');
-                    if (dot) strncpy(dot, ".sav", 5);
-                    else strncat(sync_path, ".sav", 1023);
-                }
-
-                if (sync_path[0] != '\0')
-                {
-                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "Syncing...");
-                    WebDAVSync::StartAsyncSync(sync_path);
-                }
-                else
-                {
-                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "No ROM loaded");
-                }
-            }
+            DoSyncWidget(settingsFrame, settingsSkewer);
         }
         break;
     case uiScreen_DisplaySettings:
