@@ -328,6 +328,39 @@ void DoTextField(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* labe
     }
 }
 
+void DoLabelId(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* id, const char* text, bool first = false)
+{
+    BoxGui::Frame settingFrame{
+        parent,
+        skewer.Spit({parent.Area.Size.X, UIRowHeight}, Gfx::align_Right),
+        {5.f, 5.f},
+        {5.f, 5.f}
+    };
+
+    BoxGui::InputElement(settingFrame, BoxGui::MakeUniqueName(SettingsPrefix, BoxGui::MakeUniqueName(id, 0)));
+
+    Gfx::DrawRectangle(settingFrame.Area.Position - Gfx::Vector2f{0.f, 5.f},
+                       settingFrame.Area.Size + Gfx::Vector2f{0.f, 5.f * 2.f},
+                       WidgetColorBright, true);
+
+    BoxGui::Skewer settingSkewer{settingFrame, settingFrame.Area.Size.Y / 2.f, BoxGui::direction_Horizontal};
+    settingSkewer.AlignLeft(20.f);
+    Gfx::DrawText(Gfx::SystemFontStandard,
+                  settingSkewer.CurrentPosition(),
+                  TextLineHeight,
+                  DarkColor,
+                  Gfx::align_Left,
+                  Gfx::align_Center,
+                  text);
+
+    if (!first)
+    {
+        Gfx::DrawRectangle(settingFrame.Area.Position + Gfx::Vector2f{10.f, -(5.f + 1.f)},
+                           {settingFrame.Area.Size.X - 2 * 10.f, 2.f},
+                           SeparatorColor);
+    }
+}
+
 void DoLabel(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* text, bool first = false)
 {
     BoxGui::Frame settingFrame{
@@ -743,9 +776,28 @@ void DoGui(BoxGui::Frame& parent)
             DoTextField(settingsFrame, settingsSkewer, "Username",      webdav_user, sizeof(webdav_user));
             DoTextField(settingsFrame, settingsSkewer, "Password",      webdav_pass, sizeof(webdav_pass));
             DoTextField(settingsFrame, settingsSkewer, "Remote Path",   webdav_path, sizeof(webdav_path));
-            // Show live progress string during sync, otherwise show last status
-            const char* progress = WebDAVSync::GetProgressString();
-            DoLabel(settingsFrame, settingsSkewer, progress[0] ? progress : syncStatusMsg);
+            // Show spinner while syncing, live progress mid-transfer, status when idle
+            {
+                static const char* spinFrames[] = {"|", "/", "-", "\\"};
+                bool syncing = WebDAVSync::IsSyncing();
+                const char* progress = WebDAVSync::GetProgressString();
+                char statusLine[256];
+                if (syncing)
+                {
+                    int frame = (int)(Gfx::AnimationTimestamp * 6) % 4;
+                    if (progress[0])
+                        snprintf(statusLine, sizeof(statusLine), "%s  %s", spinFrames[frame], progress);
+                    else
+                        snprintf(statusLine, sizeof(statusLine), "%s  Syncing...", spinFrames[frame]);
+                }
+                else
+                {
+                    snprintf(statusLine, sizeof(statusLine), "%s", syncStatusMsg);
+                    // pick up updated status after async sync finishes
+                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "%s", WebDAVSync::GetStatusString());
+                }
+                DoLabelId(settingsFrame, settingsSkewer, "webdav_status", statusLine);
+            }
 
             strncpy(Config::WebDAVURL,        webdav_url,  sizeof(Config::WebDAVURL)  - 1);
             strncpy(Config::WebDAVUsername,   webdav_user, sizeof(Config::WebDAVUsername) - 1);
@@ -753,7 +805,10 @@ void DoGui(BoxGui::Frame& parent)
             strncpy(Config::WebDAVRemotePath, webdav_path, sizeof(Config::WebDAVRemotePath) - 1);
 
             doSync = false;
-            DoCheckbox(settingsFrame, settingsSkewer, "Sync Saves Now", doSync);
+            if (!WebDAVSync::IsSyncing())
+                DoCheckbox(settingsFrame, settingsSkewer, "Sync Saves Now", doSync);
+            else
+                DoLabel(settingsFrame, settingsSkewer, "Syncing...");
             if (doSync)
             {
                 // Use active SRAM path if ROM is loaded, else derive from last ROM path
@@ -773,9 +828,8 @@ void DoGui(BoxGui::Frame& parent)
 
                 if (sync_path[0] != '\0')
                 {
-                    std::string msg;
-                    WebDAVSync::Sync(sync_path, msg);
-                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "%s", msg.c_str());
+                    snprintf(syncStatusMsg, sizeof(syncStatusMsg), "Syncing...");
+                    WebDAVSync::StartAsyncSync(sync_path);
                 }
                 else
                 {

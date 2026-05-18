@@ -30,4 +30,11 @@ const char* GetStatusString();
 // Empty string when not actively syncing.
 const char* GetProgressString();
 
+// Start a sync on a background thread. Returns immediately.
+// Check IsSyncing() to know when it finishes.
+void StartAsyncSync(const char* local_path);
+
+// True while an async sync is running.
+bool IsSyncing();
+
 } // namespace WebDAVSync

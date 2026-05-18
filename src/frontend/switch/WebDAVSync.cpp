@@ -9,12 +9,15 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <string>
+#include <thread>
+#include <atomic>
 
 namespace WebDAVSync
 {
 
 static char s_status_str[128]   = "Never synced";
 static char s_progress_str[128] = "";
+static std::atomic<bool> s_syncing{false};
 
 static void dbg(const char* fmt, ...)
 {
@@ -543,6 +546,25 @@ const char* GetStatusString()
 const char* GetProgressString()
 {
     return s_progress_str;
+}
+
+void StartAsyncSync(const char* local_path)
+{
+    if (s_syncing.load()) return;
+    s_syncing = true;
+    snprintf(s_progress_str, sizeof(s_progress_str), "Connecting...");
+    std::string path(local_path);
+    std::thread([path]()
+    {
+        std::string msg;
+        Sync(path.c_str(), msg);
+        s_syncing = false;
+    }).detach();
+}
+
+bool IsSyncing()
+{
+    return s_syncing.load();
 }
 
 } // namespace WebDAVSync
