@@ -343,7 +343,7 @@ void DoGui(BoxGui::Frame& parent)
             if (BoxGui::ConfirmPressed())
             {
                 std::string romPath = CurrentSelectionPath();
-                Emulation::LoadROM(romPath.c_str());
+                Emulation::RequestLoadROM(romPath.c_str());
                 StartMenu::PushLastPlayed(romPath, CurrentEntries[CurrentSelection].ROMDBEntry);
                 BoxGui::ForceSelecton(BoxGui::MakeUniqueName(FileBrowserPrefix, 0), false);
             }

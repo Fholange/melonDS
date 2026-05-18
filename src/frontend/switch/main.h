@@ -28,6 +28,8 @@ enum
 extern int State;
 
 void LoadROM(const char* file);
+void RequestLoadROM(const char* file);  // deferred: safe to call from within a UI frame
+void DispatchPendingLoad();             // call once per frame after Gfx::EndFrame
 void LoadBIOS();
 void SetPause(bool pause);
 void Stop();

@@ -918,6 +918,23 @@ void LoadROM(const char* file)
     Frontend::EnableCheats(true);
 }
 
+static char s_pendingROM[1024] = {0};
+
+void RequestLoadROM(const char* file)
+{
+    strncpy(s_pendingROM, file, sizeof(s_pendingROM) - 1);
+    s_pendingROM[sizeof(s_pendingROM) - 1] = '\0';
+}
+
+void DispatchPendingLoad()
+{
+    if (s_pendingROM[0] == '\0') return;
+    char path[1024];
+    strncpy(path, s_pendingROM, sizeof(path) - 1);
+    s_pendingROM[0] = '\0';
+    LoadROM(path);
+}
+
 void LoadBIOS()
 {
     Overclocking::ApplyOverclock(Config::SwitchOverclock);
@@ -1148,7 +1165,7 @@ int main(int argc, const char* argv[])
 
         if (!argvLoaded && argc == 2)
         {
-            Emulation::LoadROM(argv[1]);
+            Emulation::RequestLoadROM(argv[1]);
             argvLoaded = true;
         }
 
@@ -1170,6 +1187,9 @@ int main(int argc, const char* argv[])
 
         Gfx::EndFrame(Emulation::State == Emulation::emuState_Running
             ? Gfx::Color() : WallpaperColor, rotation);
+
+        // Dispatch deferred ROM load between frames so LoadROM can safely call StartFrame
+        Emulation::DispatchPendingLoad();
     }
 
     Emulation::DeInit();

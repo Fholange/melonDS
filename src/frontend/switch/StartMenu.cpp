@@ -279,7 +279,7 @@ void DoGui(BoxGui::Frame& parent)
                 KeyExplanation::Explain(KeyExplanation::button_A, "Start");
                 if (BoxGui::ConfirmPressed())
                 {
-                    Emulation::LoadROM(LastPlayedROMs[selectedEntry].Path.c_str());
+                    Emulation::RequestLoadROM(LastPlayedROMs[selectedEntry].Path.c_str());
                     PushLastPlayed(LastPlayedROMs[selectedEntry].Path, LastPlayedROMs[selectedEntry].TitleIconIdx);
                 }
             }
