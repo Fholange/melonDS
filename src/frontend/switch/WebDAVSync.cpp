@@ -9,7 +9,10 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <string>
+#include <vector>
+#include <algorithm>
 #include <atomic>
+#include <dirent.h>
 #include <switch.h>
 
 namespace WebDAVSync
@@ -280,6 +283,37 @@ static void backup_local(const char* local_path)
     }
     if (src) fclose(src);
     if (dst) fclose(dst);
+
+    // Trim oldest backups for this file if a limit is set
+    int max = Config::WebDAVMaxBackups;
+    if (max > 0)
+    {
+        // Collect all backup entries for this filename prefix
+        std::vector<std::string> entries;
+        DIR* dir = opendir(backup_dir);
+        if (dir)
+        {
+            struct dirent* de;
+            while ((de = readdir(dir)) != nullptr)
+            {
+                // Backup names are "<filename>-YYMMDD-HHMMSS"
+                if (strncmp(de->d_name, filename, strlen(filename)) == 0
+                    && de->d_name[strlen(filename)] == '-')
+                {
+                    entries.push_back(std::string(backup_dir) + "/" + de->d_name);
+                }
+            }
+            closedir(dir);
+        }
+        // Sort ascending (oldest first — timestamp suffix sorts lexicographically)
+        std::sort(entries.begin(), entries.end());
+        // Delete oldest entries beyond the limit
+        while ((int)entries.size() > max)
+        {
+            remove(entries.front().c_str());
+            entries.erase(entries.begin());
+        }
+    }
 }
 
 // ---- RetroArch manifest helpers ---------------------------------------------

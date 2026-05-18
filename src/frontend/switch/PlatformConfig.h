@@ -49,6 +49,7 @@ extern char WebDAVUsername[128];
 extern char WebDAVPassword[128];
 extern char WebDAVRemotePath[256];
 extern int  WebDAVLastSync;
+extern int  WebDAVMaxBackups;
 
 }
 

@@ -48,6 +48,7 @@ char WebDAVUsername[128]   = "";
 char WebDAVPassword[128]   = "";
 char WebDAVRemotePath[256] = "/saves/";
 int  WebDAVLastSync        = 0;
+int  WebDAVMaxBackups      = 0;
 
 ConfigEntry PlatformConfigFile[] =
 {
@@ -100,6 +101,7 @@ ConfigEntry PlatformConfigFile[] =
     {"WebDAVPassword",     1, WebDAVPassword,     0, "",                            127},
     {"WebDAVRemotePath",   1, WebDAVRemotePath,   0, "/saves/",                    255},
     {"WebDAVLastSync",     0, &WebDAVLastSync,    0, NULL,                            0},
+    {"WebDAVMaxBackups",   0, &WebDAVMaxBackups,  0, NULL,                            0},
 
     {"", -1, NULL, 0, NULL, 0}
 };

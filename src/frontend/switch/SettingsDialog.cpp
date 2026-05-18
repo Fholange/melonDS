@@ -845,6 +845,16 @@ void DoGui(BoxGui::Frame& parent)
             }
 
             static bool show_password = false;
+            static char webdav_max_backups[8] = {0};
+            static bool webdav_extra_initialized = false;
+            if (!webdav_extra_initialized)
+            {
+                if (Config::WebDAVMaxBackups > 0)
+                    snprintf(webdav_max_backups, sizeof(webdav_max_backups), "%d", Config::WebDAVMaxBackups);
+                else
+                    strncpy(webdav_max_backups, "0", sizeof(webdav_max_backups));
+                webdav_extra_initialized = true;
+            }
 
             SectionHeader(settingsFrame, settingsSkewer, "WebDAV Save Sync");
             DoTextField(settingsFrame, settingsSkewer, "URL",           webdav_url,  sizeof(webdav_url));
@@ -852,10 +862,12 @@ void DoGui(BoxGui::Frame& parent)
             DoTextField(settingsFrame, settingsSkewer, "Password",      webdav_pass, sizeof(webdav_pass), false, !show_password);
             DoCheckbox(settingsFrame, settingsSkewer,  "Show password", show_password);
             DoTextField(settingsFrame, settingsSkewer, "Remote Path",   webdav_path, sizeof(webdav_path));
+            DoTextField(settingsFrame, settingsSkewer, "Max backups (0 = unlimited)", webdav_max_backups, sizeof(webdav_max_backups));
             strncpy(Config::WebDAVURL,        webdav_url,  sizeof(Config::WebDAVURL)  - 1);
             strncpy(Config::WebDAVUsername,   webdav_user, sizeof(Config::WebDAVUsername) - 1);
             strncpy(Config::WebDAVPassword,   webdav_pass, sizeof(Config::WebDAVPassword) - 1);
             strncpy(Config::WebDAVRemotePath, webdav_path, sizeof(Config::WebDAVRemotePath) - 1);
+            Config::WebDAVMaxBackups = atoi(webdav_max_backups);
 
             DoSyncWidget(settingsFrame, settingsSkewer);
         }
