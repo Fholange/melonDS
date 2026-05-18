@@ -860,9 +860,9 @@ void LoadROM(const char* file)
 {
     Overclocking::ApplyOverclock(Config::SwitchOverclock);
 
-    // Sync save from WebDAV before loading the ROM
-    std::string syncMsg;
+    // Sync save from WebDAV before loading the ROM — async so we can show progress
     WebDAVSync::SyncResult syncResult = WebDAVSync::Sync_NoConfig;
+    if (Config::WebDAVURL[0] != '\0')
     {
         char sram_path[1024];
         strncpy(sram_path, file, 1023);
@@ -870,7 +870,29 @@ void LoadROM(const char* file)
         char* dot = strrchr(sram_path, '.');
         if (dot) strncpy(dot, ".sav", 5);
         else strncat(sram_path, ".sav", 1023);
-        syncResult = WebDAVSync::Sync(sram_path, syncMsg);
+
+        WebDAVSync::StartAsyncSync(sram_path, /*upload_only=*/false);
+        while (WebDAVSync::IsSyncing())
+        {
+            Gfx::StartFrame();
+            int rotation = Config::GlobalRotation;
+            int w = 1280, h = 720;
+            if (rotation % 2) std::swap(w, h);
+            Gfx::PushScissor(0, 0, (u32)w, (u32)h);
+
+            // Dark background
+            Gfx::DrawRectangle({0.f, 0.f}, {(float)w, (float)h}, WallpaperColor);
+
+            // Progress text centered
+            const char* prog = WebDAVSync::GetProgressString();
+            if (!prog[0]) prog = "Syncing save...";
+            Gfx::DrawText(Gfx::SystemFontStandard, {w / 2.f, h / 2.f}, 30.f,
+                          {1.f, 1.f, 1.f, 1.f}, Gfx::align_Center, Gfx::align_Center, prog);
+
+            Gfx::PopScissor();
+            Gfx::EndFrame(WallpaperColor, rotation);
+        }
+        syncResult = WebDAVSync::GetLastResult();
     }
 
     assert(State == emuState_Nothing);
@@ -888,7 +910,7 @@ void LoadROM(const char* file)
 
     // Show sync result after ROM loads so the notification renders in-game
     if (syncResult != WebDAVSync::Sync_NoConfig)
-        g_notification.Show("WebDAV: %s", syncMsg.c_str());
+        g_notification.Show("WebDAV: %s", WebDAVSync::GetStatusString());
 
     load_game_from_file(file);
     

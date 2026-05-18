@@ -18,10 +18,10 @@ enum SyncResult
 };
 
 // Run a full sync for a given local save file path.
-// Compares local vs remote modification times against last_sync_time.
+// If upload_only=true, skips download even if remote is newer (safe while game is running).
 // Creates a timestamped backup before any overwrite.
 // Returns a SyncResult and sets out_message to a human-readable status.
-SyncResult Sync(const char* local_path, std::string& out_message);
+SyncResult Sync(const char* local_path, std::string& out_message, bool upload_only = false);
 
 // Returns the last status string (result of last sync)
 const char* GetStatusString();
@@ -30,9 +30,13 @@ const char* GetStatusString();
 // Empty string when not actively syncing.
 const char* GetProgressString();
 
+// Returns the SyncResult of the most recently completed async sync.
+SyncResult GetLastResult();
+
 // Start a sync on a background thread. Returns immediately.
-// Check IsSyncing() to know when it finishes.
-void StartAsyncSync(const char* local_path);
+// If upload_only=true, will not download even if remote is newer.
+// Check IsSyncing() to know when it finishes, GetLastResult() for the outcome.
+void StartAsyncSync(const char* local_path, bool upload_only = false);
 
 // True while an async sync is running.
 bool IsSyncing();

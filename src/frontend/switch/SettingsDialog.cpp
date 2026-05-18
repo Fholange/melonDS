@@ -684,7 +684,6 @@ void ShowImage(BoxGui::Frame& parent, BoxGui::Skewer& skewer, int textureId, int
 void DoSyncWidget(BoxGui::Frame& parent, BoxGui::Skewer& skewer)
 {
     static char syncStatusMsg[256] = {0};
-    static bool doSync = false;
 
     // Refresh status when idle
     if (!WebDAVSync::IsSyncing())
@@ -711,14 +710,11 @@ void DoSyncWidget(BoxGui::Frame& parent, BoxGui::Skewer& skewer)
         DoLabelId(parent, skewer, "webdav_status", statusLine);
     }
 
-    // Sync button
-    doSync = false;
-    if (!WebDAVSync::IsSyncing())
-        DoCheckbox(parent, skewer, "Sync Saves Now", doSync);
-    else
-        DoLabel(parent, skewer, "Syncing...");
+    // Sync button — always DoCheckbox to keep a stable widget ID and prevent scroll jumps
+    bool syncPressed = false;
+    DoCheckbox(parent, skewer, "Sync Saves Now", syncPressed);
 
-    if (doSync)
+    if (syncPressed && !WebDAVSync::IsSyncing())
     {
         char sync_path[1024] = {0};
         if (Frontend::SRAMPath[0][0] != '\0')
@@ -737,7 +733,7 @@ void DoSyncWidget(BoxGui::Frame& parent, BoxGui::Skewer& skewer)
         if (sync_path[0] != '\0')
         {
             snprintf(syncStatusMsg, sizeof(syncStatusMsg), "Syncing...");
-            WebDAVSync::StartAsyncSync(sync_path);
+            WebDAVSync::StartAsyncSync(sync_path, /*upload_only=*/true);
         }
         else
         {

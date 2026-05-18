@@ -9,8 +9,8 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <string>
-#include <thread>
 #include <atomic>
+#include <switch.h>
 
 namespace WebDAVSync
 {
@@ -18,6 +18,7 @@ namespace WebDAVSync
 static char s_status_str[128]   = "Never synced";
 static char s_progress_str[128] = "";
 static std::atomic<bool> s_syncing{false};
+static SyncResult s_last_result = Sync_UpToDate;
 
 static void dbg(const char* fmt, ...)
 {
@@ -433,7 +434,7 @@ static void update_manifest(const char* local_path, const std::string& new_hash)
 
 // ---- Public API -------------------------------------------------------------
 
-SyncResult Sync(const char* local_path, std::string& out_message)
+SyncResult Sync(const char* local_path, std::string& out_message, bool upload_only)
 {
     dbg("=== Sync called: %s", local_path);
     dbg("URL: %s  User: %s", Config::WebDAVURL, Config::WebDAVUsername);
@@ -518,7 +519,7 @@ SyncResult Sync(const char* local_path, std::string& out_message)
         return Sync_Error;
     }
 
-    if (remote_changed || (!local_exists && remote_exists))
+    if (!upload_only && (remote_changed || (!local_exists && remote_exists)))
     {
         if (local_exists) backup_local(local_path);
         if (download(url.c_str(), local_path))
@@ -531,6 +532,12 @@ SyncResult Sync(const char* local_path, std::string& out_message)
         snprintf(s_status_str, sizeof(s_status_str), "Download failed");
         out_message = s_status_str;
         return Sync_Error;
+    }
+    else if (upload_only && (remote_changed || (!local_exists && remote_exists)))
+    {
+        snprintf(s_status_str, sizeof(s_status_str), "Save already up to date");
+        out_message = s_status_str;
+        return Sync_UpToDate;
     }
 
     snprintf(s_status_str, sizeof(s_status_str), "Save already up to date");
@@ -548,18 +555,49 @@ const char* GetProgressString()
     return s_progress_str;
 }
 
-void StartAsyncSync(const char* local_path)
+SyncResult GetLastResult()
+{
+    return s_last_result;
+}
+
+static char s_sync_thread_path[1024] = {0};
+static bool s_sync_upload_only = false;
+static Thread s_sync_thread;
+static bool s_thread_started = false;
+
+static void sync_thread_func(void*)
+{
+    std::string msg;
+    s_last_result = Sync(s_sync_thread_path, msg, s_sync_upload_only);
+    s_syncing = false;
+}
+
+void StartAsyncSync(const char* local_path, bool upload_only)
 {
     if (s_syncing.load()) return;
-    s_syncing = true;
-    snprintf(s_progress_str, sizeof(s_progress_str), "Connecting...");
-    std::string path(local_path);
-    std::thread([path]()
+    // Clean up previous thread (already finished since !s_syncing)
+    if (s_thread_started)
     {
-        std::string msg;
-        Sync(path.c_str(), msg);
+        threadWaitForExit(&s_sync_thread);
+        threadClose(&s_sync_thread);
+        s_thread_started = false;
+    }
+    s_syncing = true;
+    s_sync_upload_only = upload_only;
+    snprintf(s_progress_str, sizeof(s_progress_str), "Connecting...");
+    strncpy(s_sync_thread_path, local_path, sizeof(s_sync_thread_path) - 1);
+    s_sync_thread_path[sizeof(s_sync_thread_path) - 1] = '\0';
+    Result rc = threadCreate(&s_sync_thread, sync_thread_func, nullptr, nullptr, 256 * 1024, 0x2C, -2);
+    if (R_SUCCEEDED(rc))
+    {
+        threadStart(&s_sync_thread);
+        s_thread_started = true;
+    }
+    else
+    {
+        snprintf(s_status_str, sizeof(s_status_str), "Failed to start sync thread");
         s_syncing = false;
-    }).detach();
+    }
 }
 
 bool IsSyncing()

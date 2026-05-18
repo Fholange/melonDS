@@ -166,16 +166,6 @@ void DoGui(BoxGui::Frame& parent)
                 CurrentUiScreen = uiScreen_InputSettings;
             }
             sideBarSkewer.Advance(spacing);
-            if (WebDAVSync::IsSyncing())
-            {
-                SideBarEntry(sideBarFrame, sideBarSkewer, "Syncing...");
-            }
-            else
-            {
-                if (SideBarEntry(sideBarFrame, sideBarSkewer, "Sync Saves"))
-                    WebDAVSync::StartAsyncSync(Frontend::SRAMPath[0]);
-            }
-            sideBarSkewer.Advance(spacing);
             if (SideBarEntry(sideBarFrame, sideBarSkewer, "Close", true))
             {
                 Emulation::Stop();
