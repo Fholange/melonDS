@@ -52,7 +52,9 @@ When a sync runs, the app compares three things: the local save file's modificat
 
 ## Safety measures
 
-Before any file is overwritten, a timestamped backup of the existing local save is written to `/switch/melonds/backups/` on the SD card. Backups are named `<romname>.sav-YYMMDD-HHMMSS`. These are never deleted automatically.
+Before any file is overwritten, a timestamped backup of the existing local save is written to `/switch/melonds/backups/` on the SD card. Backups are named `<romname>.sav-YYMMDD-HHMMSS`.
+
+By default backups are kept forever. You can set a limit under Settings → WebDAV Save Sync → **Max backups (0 = unlimited)**. When a limit is set, the oldest backups for that game are deleted automatically after each new backup is created, keeping only the most recent N.
 
 Downloads are written to a temporary file first and only renamed into place if the transfer completes successfully. A failed or interrupted download will never leave a partial or corrupted save file.
 
