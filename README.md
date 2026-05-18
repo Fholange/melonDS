@@ -70,6 +70,22 @@ The app also updates RetroArch's `manifest.server` file on the WebDAV server aft
 
 ---
 
+## Building
+
+Follow the build instructions from the [original Gheovgos repository](https://github.com/Gheovgos/melonDS) with two differences specific to this fork:
+
+**1. Install the mbedtls package** (used for MD5 hashing):
+
+```bash
+dkp-pacman -S switch-mbedtls
+```
+
+`switch-curl` is already required by the original build, so no change there.
+
+**2. The CMakeLists is already updated** in this repo — `mbedtls`, `mbedcrypto`, and `mbedx509` are linked automatically and `WebDAVSync.cpp` is included in the build. No manual changes needed.
+
+---
+
 ## License
 
 [![GNU GPLv3 Image](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
