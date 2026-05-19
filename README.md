@@ -4,6 +4,14 @@ This is a fork of [Gheovgos's melonDS Switch port](https://github.com/Gheovgos/m
 
 ---
 
+## Why not just use RetroArch on Switch?
+
+Two reasons. First, the Switch version of RetroArch only supports the legacy melonDS core, not the modern melonDS DS core. The two cores use different save file extensions (`.sav` vs `.srm`), so saves from the standalone port are not directly compatible with the legacy core anyway. Second, RetroArch's DS emulation performance on Switch is poor. The standalone port runs significantly better.
+
+This fork is for people who use the standalone melonDS port on Switch and RetroArch on other devices (PC, iOS), and want saves to stay in sync between them.
+
+---
+
 ## What this adds
 
 Automatic save sync over WebDAV on ROM launch and app exit, with a manual sync button available in both the settings menu and the in-game pause menu. Progress is shown on screen during sync so you always know what is happening.
