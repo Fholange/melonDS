@@ -293,8 +293,8 @@ void DoTextField(BoxGui::Frame& parent, BoxGui::Skewer& skewer, const char* labe
             if (masked)
                 swkbdConfigSetPasswordFlag(&kbd, true);
 
-            char out[bufferSize];
-            rc = swkbdShow(&kbd, out, bufferSize);
+            char out[512];
+            rc = swkbdShow(&kbd, out, bufferSize < sizeof(out) ? bufferSize : sizeof(out));
             if (R_SUCCEEDED(rc)) {
                 strncpy(buffer, out, bufferSize - 1);
                 buffer[bufferSize - 1] = '\0';

@@ -1067,6 +1067,7 @@ int main(int argc, const char* argv[])
 
     socketInitializeDefault();
     nxlinkStdio();
+    WebDAVSync::Init();
 
     romfsInit();
     setInitialize();
@@ -1200,7 +1201,7 @@ int main(int argc, const char* argv[])
         if (Frontend::SRAMPath[0][0] != '\0')
         {
             std::string msg;
-            WebDAVSync::Sync(Frontend::SRAMPath[0], msg);
+            WebDAVSync::Sync(Frontend::SRAMPath[0], msg, /*upload_only=*/true);
         }
     }
 
@@ -1220,6 +1221,7 @@ int main(int argc, const char* argv[])
     setExit();
     romfsExit();
 
+    WebDAVSync::Shutdown();
     socketExit();
 
     appletUnlockExit();

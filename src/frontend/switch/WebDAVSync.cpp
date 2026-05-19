@@ -25,7 +25,10 @@ static SyncResult s_last_result = Sync_UpToDate;
 
 static void dbg(const char* fmt, ...)
 {
-    FILE* f = fopen("/switch/melonds/webdav_debug.log", "a");
+    static const char* log_path = "/switch/melonds/webdav_debug.log";
+    struct stat st;
+    if (stat(log_path, &st) == 0 && st.st_size > 512 * 1024) return;
+    FILE* f = fopen(log_path, "a");
     if (!f) return;
     va_list args;
     va_start(args, fmt);
@@ -69,6 +72,7 @@ static CURL* make_curl(const char* url)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "melonDS-Switch/1.0");
     return curl;
 }
 
@@ -133,7 +137,8 @@ static time_t get_remote_mtime(const char* url)
 
     const char* needle = "last-modified: ";
     size_t pos = headers.find(needle);
-    if (pos == std::string::npos) { dbg("No Last-Modified header"); return 0; }
+    // File exists on server but has no Last-Modified header — distinguish from "not found"
+    if (pos == std::string::npos) { dbg("No Last-Modified header"); return (time_t)-1; }
 
     pos += strlen(needle);
     size_t end = headers.find("\r\n", pos);
@@ -242,15 +247,25 @@ static bool download(const char* url, const char* local_path)
     curl_easy_cleanup(curl);
     fclose(f);
 
-    if (res != CURLE_OK || http_code != 200)
+    if (res != CURLE_OK || http_code != 200 || downloaded == 0)
     {
         remove(tmp.c_str());
         return false;
     }
 
     snprintf(s_status_str, sizeof(s_status_str), "Downloaded save (%lld KB)", (long long)(downloaded / 1024));
-    remove(local_path);
-    rename(tmp.c_str(), local_path);
+
+    // Atomic replace: move existing file aside, rename .tmp into place, then remove the aside.
+    // If rename fails, restore the original so we never leave the user with no save.
+    std::string bak = std::string(local_path) + ".bak";
+    rename(local_path, bak.c_str()); // may fail if local doesn't exist — harmless
+    if (rename(tmp.c_str(), local_path) != 0)
+    {
+        rename(bak.c_str(), local_path); // restore original
+        remove(tmp.c_str());
+        return false;
+    }
+    remove(bak.c_str());
     return true;
 }
 
@@ -326,16 +341,16 @@ static std::string md5_of_file(const char* path)
 
     mbedtls_md5_context ctx;
     mbedtls_md5_init(&ctx);
-    mbedtls_md5_starts_ret(&ctx);
+    mbedtls_md5_starts(&ctx);
 
     unsigned char buf[4096];
     size_t n;
     while ((n = fread(buf, 1, sizeof(buf), f)) > 0)
-        mbedtls_md5_update_ret(&ctx, buf, n);
+        mbedtls_md5_update(&ctx, buf, n);
     fclose(f);
 
     unsigned char digest[16];
-    mbedtls_md5_finish_ret(&ctx, digest);
+    mbedtls_md5_finish(&ctx, digest);
     mbedtls_md5_free(&ctx);
 
     char hex[33];
@@ -375,7 +390,6 @@ static bool upload_manifest(const std::string& manifest_url, const std::string& 
     if (!curl) return false;
 
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-    curl_easy_setopt(curl, CURLOPT_READFUNCTION, nullptr);
 
     // Use a local copy for the read callback
     struct ReadCtx { const char* data; size_t len; size_t pos; };
@@ -468,6 +482,16 @@ static void update_manifest(const char* local_path, const std::string& new_hash)
 
 // ---- Public API -------------------------------------------------------------
 
+void Init()
+{
+    curl_global_init(CURL_GLOBAL_ALL);
+}
+
+void Shutdown()
+{
+    curl_global_cleanup();
+}
+
 SyncResult Sync(const char* local_path, std::string& out_message, bool upload_only)
 {
     dbg("=== Sync called: %s", local_path);
@@ -490,6 +514,14 @@ SyncResult Sync(const char* local_path, std::string& out_message, bool upload_on
     dbg("Local: exists=%d mtime=%ld", (int)local_exists, (long)local_mtime);
 
     time_t remote_mtime = get_remote_mtime(url.c_str());
+    // -1 means exists but no Last-Modified header — skip sync, can't determine direction safely
+    if (remote_mtime == (time_t)-1)
+    {
+        dbg("Remote exists but no Last-Modified header; skipping sync");
+        snprintf(s_status_str, sizeof(s_status_str), "Sync skipped: remote has no timestamp");
+        out_message = s_status_str;
+        return Sync_UpToDate;
+    }
     bool remote_exists = (remote_mtime > 0);
     dbg("Remote: exists=%d mtime=%ld", (int)remote_exists, (long)remote_mtime);
 
@@ -616,6 +648,7 @@ void StartAsyncSync(const char* local_path, bool upload_only)
         threadClose(&s_sync_thread);
         s_thread_started = false;
     }
+    s_last_result = Sync_UpToDate;
     s_syncing = true;
     s_sync_upload_only = upload_only;
     snprintf(s_progress_str, sizeof(s_progress_str), "Connecting...");
@@ -629,6 +662,7 @@ void StartAsyncSync(const char* local_path, bool upload_only)
     }
     else
     {
+        s_last_result = Sync_Error;
         snprintf(s_status_str, sizeof(s_status_str), "Failed to start sync thread");
         s_syncing = false;
     }

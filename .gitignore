@@ -15,4 +15,5 @@ cmake-build-debug
 
 .DS_Store
 .vscode/settings.json
-build_script.shbuild_switch/
+build_script.sh
+build_switch/

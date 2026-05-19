@@ -17,6 +17,11 @@ enum SyncResult
     Sync_Error,
 };
 
+// Call once on the main thread before any sync operations (initializes libcurl).
+void Init();
+// Call once on exit after all syncs are done.
+void Shutdown();
+
 // Run a full sync for a given local save file path.
 // If upload_only=true, skips download even if remote is newer (safe while game is running).
 // Creates a timestamped backup before any overwrite.

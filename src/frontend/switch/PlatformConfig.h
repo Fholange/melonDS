@@ -1,5 +1,5 @@
 #ifndef PLATFORMCONFIG_H
-#define PLATOFRMCONFIG_H
+#define PLATFORMCONFIG_H
 
 #include "../../Config.h"
 
