@@ -1,6 +1,6 @@
-# melonDS Switch — WebDAV Save Sync Fork
+# melonDS Switch: WebDAV Save Sync Fork
 
-This is a fork of [Gheovgos's melonDS Switch port](https://github.com/Gheovgos/melonDS), which itself is a continuation of RSDuck's standalone melonDS port for Nintendo Switch. This fork adds automatic WebDAV cloud save synchronization, designed to keep DS save files in sync across devices that use RetroArch cloud sync — including PC, iOS, and Switch.
+This is a fork of [Gheovgos's melonDS Switch port](https://github.com/Gheovgos/melonDS) maintained by [@Fholange](https://github.com/Fholange), which itself is a continuation of RSDuck's standalone melonDS port for Nintendo Switch. This fork adds automatic WebDAV cloud save synchronization, designed to keep DS save files in sync across devices that use RetroArch cloud sync, including PC, iOS, and Switch.
 
 ---
 
@@ -48,13 +48,13 @@ These fields are also editable from within the app under Settings → WebDAV Sav
 
 When a sync runs, the app compares three things: the local save file's modification time, the remote file's last-modified timestamp (fetched via HTTP HEAD), and the time of the last successful sync stored in the config.
 
-**Remote newer, local unchanged** — the remote save is downloaded and replaces the local file. This happens when another device saved and synced since the last time melonDS ran.
+**Remote newer, local unchanged:** the remote save is downloaded and replaces the local file. This happens when another device saved and synced since the last time melonDS ran.
 
-**Local newer, remote unchanged** — the local save is uploaded to the server. This happens on exit after playing.
+**Local newer, remote unchanged:** the local save is uploaded to the server. This happens on exit after playing.
 
-**Both changed since last sync** — this is a conflict. The file with the newer modification time wins. The losing file is backed up before being overwritten.
+**Both changed since last sync:** this is a conflict. The file with the newer modification time wins. The losing file is backed up before being overwritten.
 
-**Neither changed** — nothing happens.
+**Neither changed:** nothing happens.
 
 ---
 
@@ -68,15 +68,15 @@ Downloads are written to a temporary file first and only renamed into place if t
 
 When syncing from the in-game pause menu or settings, the sync is **upload-only**. The app will never download and overwrite a save file while a game is actively running, since the emulator holds the save in memory and would overwrite any downloaded file on exit anyway.
 
-The app also updates RetroArch's `manifest.server` file on the WebDAV server after every upload so that RetroArch on other devices correctly detects the new version. This means RetroArch may report "finished with conflicts" when it next syncs — this is expected and harmless. With RetroArch's sync mode set to server-wins, it will always resolve to the correct save.
+The app also updates RetroArch's `manifest.server` file on the WebDAV server after every upload so that RetroArch on other devices correctly detects the new version. This means RetroArch may report "finished with conflicts" when it next syncs. This is expected and harmless. With RetroArch's sync mode set to server-wins, it will always resolve to the correct save.
 
 ---
 
 ## Sync timing
 
-- **On ROM launch** — syncs before the game loads. A progress screen is shown during this time.
-- **On app exit** — syncs the current save when melonDS is fully closed.
-- **Manual** — available in Settings and in the in-game pause menu. Upload-only.
+- **On ROM launch:** syncs before the game loads. A progress screen is shown during this time.
+- **On app exit:** syncs the current save when melonDS is fully closed.
+- **Manual:** available in Settings and in the in-game pause menu. Upload-only.
 
 ---
 
@@ -92,7 +92,7 @@ dkp-pacman -S switch-mbedtls
 
 `switch-curl` is already required by the original build, so no change there.
 
-**2. The CMakeLists is already updated** in this repo — `mbedtls`, `mbedcrypto`, and `mbedx509` are linked automatically and `WebDAVSync.cpp` is included in the build. No manual changes needed.
+**2. The CMakeLists is already updated** in this repo: `mbedtls`, `mbedcrypto`, and `mbedx509` are linked automatically and `WebDAVSync.cpp` is included in the build. No manual changes needed.
 
 ---
 
