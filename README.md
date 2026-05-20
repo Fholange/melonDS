@@ -1,6 +1,6 @@
 # melonDS Switch — WebDAV Save Sync Fork
 
-This is a fork of [Gheovgos's melonDS Switch port](https://github.com/Gheovgos/melonDS), which itself is a continuation of RSDuck's standalone melonDS port for Nintendo Switch. This fork adds automatic WebDAV cloud save synchronization, designed to keep DS save files in sync across devices that use RetroArch cloud sync — including PC, iOS, and Switch.
+This is a fork of [Gheovgos's melonDS Switch port](https://github.com/Gheovgos/melonDS) maintained by [@Fholange](https://github.com/Fholange), which itself is a continuation of RSDuck's standalone melonDS port for Nintendo Switch. This fork adds automatic WebDAV cloud save synchronization, designed to keep DS save files in sync across devices that use RetroArch cloud sync — including PC, iOS, and Switch.
 
 ---
 
